@@ -95,6 +95,8 @@ def generate_video(gen_net, mask_net, static_net, z) :
 
     video = foreground * mask + background * (1 - mask)
 
+    return video
+
 data_transform = torchvision.transforms.Compose([torchvision.transforms.Scale((64,64)), torchvision.transforms.ToTensor()])
 image_data = ImageFolder(root='./testset/', transform=data_transform)
 data_loader = DataLoader(image_data, batch_size=1, shuffle=True)
@@ -109,8 +111,6 @@ for data, _ in data_loader :
     elif video_data == None :
         video_data = data
 
-print(video_data.shape)
-
 dtype = torch.FloatTensor
 
 video = Variable(video_data)
@@ -118,10 +118,10 @@ video = Variable(video_data)
 D = discriminator()
 gen_net, mask_net, static_net = generator()
 
-real_labels = Variable(torch.ones(1))
-fake_labels = Variable(torch.zeros(1))
+real_labels = Variable(torch.ones(1).type(torch.LongTensor))
+fake_labels = Variable(torch.zeros(1).type(torch.LongTensor))
 
-criterion = nn.BCELoss()
+criterion = nn.CrossEntropyLoss()
 
 d_optimizer = torch.optim.Adam(D.parameters(), lr=3e-3,)
 g_optimizer = torch.optim.Adam(gen_net.parameters(), lr=3e-3)
@@ -132,14 +132,14 @@ g_optimizer = torch.optim.Adam(gen_net.parameters(), lr=3e-3)
 # 1. Train Discriminator
 
 # 1-1. Real Video
-outputs = D(video)
-d_loss_real = criterion(outputs, real_labels)
+outputs = D(video).view(1, 2)
+d_loss_real = criterion(outputs.data, real_labels)
 real_score = outputs
 
 # 1-2. Fake Video
 z = Variable(torch.randn(100) * 0.01)
 fake_videos = generate_video(gen_net, mask_net, static_net, z)
-outputs = D(fake_videos)
+outputs = D(fake_videos).view(1, 2)
 d_loss_fake = criterion(outputs, fake_labels)
 fake_score = outputs
 
@@ -156,7 +156,7 @@ d_optimizer.step()
 # 2. Train Generator
 z = Variable(torch.randn(100) * 0.01)
 fake_videos = generate_video(gen_net, mask_net, static_net, z)
-outputs = discriminator(fake_videos)
+outputs = D(fake_videos).view(1, 2)
 
 g_loss = criterion(outputs, real_labels)
 
