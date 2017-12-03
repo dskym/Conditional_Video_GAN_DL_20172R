@@ -124,6 +124,11 @@ gen_net = gen_net.type(dtype)
 mask_net = mask_net.type(dtype)
 static_net = static_net.type(dtype)
 
+D.apply(init_weights)
+gen_net.apply(init_weights)
+mask_net.apply(init_weights)
+static_net.apply(init_weights)
+
 if is_gpu :
     real_labels = Variable(torch.ones(1).type(torch.cuda.LongTensor))
     fake_labels = Variable(torch.zeros(1).type(torch.cuda.LongTensor))
@@ -132,16 +137,15 @@ else :
     fake_labels = Variable(torch.zeros(1).type(torch.LongTensor))
 
 criterion = nn.CrossEntropyLoss().type(dtype)
+#criterion = nn.BCELoss().type(dtype)
+#criterion = nn.BCEWithLogitsLoss().type(dtype)
+
 
 d_optimizer = torch.optim.Adam(D.parameters(), lr=2e-4, betas=(0.5, 0.999))
-g_optimizer = torch.optim.Adam(gen_net.parameters(), lr=2e-4, betas=(0.5, 0.999))
-
-gen_net.apply(init_weights)
-mask_net.apply(init_weights)
-static_net.apply(init_weights)
+g_optimizer = torch.optim.Adam(list(gen_net.parameters()) + list(mask_net.parameters()) + list(static_net.parameters()), lr=2e-4, betas=(0.5, 0.999))
 
 
-data_transform = torchvision.transforms.Compose([torchvision.transforms.Scale((64,64)), torchvision.transforms.ToTensor(), torchvision.transforms.Normalize([0.0], [1.0])])
+data_transform = torchvision.transforms.Compose([torchvision.transforms.Scale((64,64)), torchvision.transforms.ToTensor()])
 image_data = ImageFolder(root='./testset/', transform=data_transform)
 data_loader = DataLoader(image_data, batch_size=1, shuffle=True)
 
@@ -155,7 +159,7 @@ for data, _ in data_loader:
     elif video_data == None:
         video_data = data
 
-video = Variable(video_data)
+video = Variable(video_data).type(dtype)
 
 for epoch in range(1, 100) :
 
@@ -164,14 +168,12 @@ for epoch in range(1, 100) :
     # 1-1. Real Video
     outputs = D(video).view(1, 2)
     d_loss_real = criterion(outputs.data, real_labels)
-    real_score = outputs
 
     # 1-2. Fake Video
     z = Variable(torch.randn(100) * 0.01).type(dtype)
     fake_videos = generate_video(gen_net, mask_net, static_net, z)
     outputs = D(fake_videos).view(1, 2)
     d_loss_fake = criterion(outputs, fake_labels)
-    fake_score = outputs
 
     d_loss = d_loss_real + d_loss_fake
 
@@ -198,11 +200,15 @@ for epoch in range(1, 100) :
     g_loss.backward()
     g_optimizer.step()
 
+    if epoch % 100 == 0 :
+        print('Epoch [%d/%d], d_loss: %.4f, g_loss: %.4f' % (epoch, 1000, d_loss.data[0], g_loss.data[0]))
+
+
+
 print('End Learning')
 
 z = Variable(torch.randn(100) * 0.01).type(dtype)
 
 for i in range(32) :
     fake_video = torch.squeeze(generate_video(gen_net, mask_net, static_net, z))[:,i,:,:]
-    print(fake_video)
     torchvision.utils.save_image(tensor=fake_video.data, filename="./test" + str(i+1) + ".png")
