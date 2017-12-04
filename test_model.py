@@ -159,49 +159,50 @@ for data, _ in data_loader:
     elif video_data == None:
         video_data = data
 
+prin
 video = Variable(video_data).type(dtype)
 
-for epoch in range(1, 100) :
+for epoch in range(100) :
+    for i, (data, _) in data_loader :
+        # 1. Train Discriminator
 
-    # 1. Train Discriminator
+        # 1-1. Real Video
+        outputs = D(video).view(1, 2)
+        d_loss_real = criterion(outputs, real_labels)
 
-    # 1-1. Real Video
-    outputs = D(video).view(1, 2)
-    d_loss_real = criterion(outputs.data, real_labels)
+        # 1-2. Fake Video
+        z = Variable(torch.randn(100) * 0.01).type(dtype)
+        fake_videos = generate_video(gen_net, mask_net, static_net, z)
+        outputs = D(fake_videos).view(1, 2)
+        d_loss_fake = criterion(outputs, fake_labels)
 
-    # 1-2. Fake Video
-    z = Variable(torch.randn(100) * 0.01).type(dtype)
-    fake_videos = generate_video(gen_net, mask_net, static_net, z)
-    outputs = D(fake_videos).view(1, 2)
-    d_loss_fake = criterion(outputs, fake_labels)
+        d_loss = d_loss_real + d_loss_fake
 
-    d_loss = d_loss_real + d_loss_fake
-
-    D.zero_grad()
-    d_loss.backward()
-    d_optimizer.step()
-
-
+        D.zero_grad()
+        d_loss.backward()
+        d_optimizer.step()
 
 
 
-    # 2. Train Generator
-    z = Variable(torch.randn(100) * 0.01).type(dtype)
-    fake_videos = generate_video(gen_net, mask_net, static_net, z)
-    outputs = D(fake_videos).view(1, 2)
 
-    g_loss = criterion(outputs, real_labels)
 
-    D.zero_grad()
-    gen_net.zero_grad()
-    mask_net.zero_grad()
-    static_net.zero_grad()
+        # 2. Train Generator
+        z = Variable(torch.randn(100) * 0.01).type(dtype)
+        fake_videos = generate_video(gen_net, mask_net, static_net, z)
+        outputs = D(fake_videos).view(1, 2)
 
-    g_loss.backward()
-    g_optimizer.step()
+        g_loss = criterion(outputs, real_labels)
 
-    if epoch % 100 == 0 :
-        print('Epoch [%d/%d], d_loss: %.4f, g_loss: %.4f' % (epoch, 1000, d_loss.data[0], g_loss.data[0]))
+        D.zero_grad()
+        gen_net.zero_grad()
+        mask_net.zero_grad()
+        static_net.zero_grad()
+
+        g_loss.backward()
+        g_optimizer.step()
+
+        if epoch % 10 == 0 :
+            print('Epoch [%d/%d], d_loss: %.4f, g_loss: %.4f' % (epoch, 1000, d_loss.data[0], g_loss.data[0]))
 
 
 
