@@ -2,6 +2,7 @@ import torch
 from torch.utils import data
 from torchvision import transforms
 from PIL import Image
+import numpy as np
 
 import os
 
@@ -33,8 +34,22 @@ class VideoFolder(data.Dataset) :
     def __getitem__(self, index) :
         video_path = self.video_path[index]
         image_path = list(map(lambda x: os.path.join(video_path, x), os.listdir(video_path)))
-        label = self.class_to_idx[str(os.path.dirname(video_path)).replace('./dataset/', '')]
-       
+        label = self.class_to_idx[str(os.path.dirname(video_path)).replace(self.root, '')]
+
+        ###W
+        cls = np.array([label])
+
+        tmp = torch.unsqueeze(torch.from_numpy(cls), 0)
+
+        label =  torch.FloatTensor(1, self.num_classes)
+
+        label.zero_()
+
+        label.scatter_(1, tmp, 1)
+
+        label = torch.squeeze(label, 0)
+        ###
+
         video = None
 
         for image in image_path :                
