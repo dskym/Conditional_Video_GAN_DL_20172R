@@ -17,27 +17,28 @@ class VideoFolder(data.Dataset) :
         self.root = root
         self.transform = transform
 
-        self.data_path = list(map(lambda x: os.path.join(root, x), os.listdir(root)))
+        self.data_path = list(map(lambda x: os.path.join(self.root, x), os.listdir(self.root)))
 
-        self.classes, self.class_to_idx = self.find_classes(root)
+        self.classes, self.class_to_idx = self.find_classes(self.root)
 
         for data_path in self.data_path :
             self.video_path = self.video_path + list(map(lambda x: os.path.join(data_path, x), os.listdir(data_path)))
 
-    def find_classes(self, dir):
+    def find_classes(self, dir) :
         classes = [d for d in os.listdir(dir) if os.path.isdir(os.path.join(dir, d))]
         classes.sort()
         class_to_idx = {classes[i]: i for i in range(len(classes))}
+        
+        self.num_classes = len(classes)
         
         return classes, class_to_idx
 
     def __getitem__(self, index) :
         video_path = self.video_path[index]
         image_path = list(map(lambda x: os.path.join(video_path, x), os.listdir(video_path)))
-        label = self.class_to_idx[str(os.path.dirname(video_path)).replace(self.root, '')]
 
-        ###W
-        cls = np.array([label])
+        ###
+        cls = np.array([self.class_to_idx[str(os.path.dirname(video_path)).replace('./dataset/', '')]])
 
         tmp = torch.unsqueeze(torch.from_numpy(cls), 0)
 
