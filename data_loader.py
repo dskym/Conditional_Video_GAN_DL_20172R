@@ -21,24 +21,21 @@ class VideoFolder(data.Dataset) :
         self.transform = transform
 
     def __getitem__(self, index) :
-        print(index)
         video_path = self.video_path[index]
         image_path = list(map(lambda x: os.path.join(video_path, x), os.listdir(video_path)))
 
         video = None
 
-        for i, (image) in enumerate(image_path) :
-            if i == 32 :
-                break
+        for image in image_path :                
             image = Image.open(image).convert('RGB')
 
             if self.transform is not None:
                 image = self.transform(image)
 
-            image.unsqueeze_(0)
+            image.unsqueeze_(1)
 
             if torch.is_tensor(video):
-                video = torch.cat((video, image), 0)
+                video = torch.cat((video, image), 1)
             elif video == None:
                 video = image
 
@@ -58,7 +55,7 @@ def get_loader(data_path, image_size, batch_size, num_workers=2):
 
     data_loader = data.DataLoader(dataset=dataset,
                                   batch_size=batch_size,
-                                  shuffle=True,
+                                  shuffle=False,
                                   num_workers=num_workers)
 
     return data_loader
