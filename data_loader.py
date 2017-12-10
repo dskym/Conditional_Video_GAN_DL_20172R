@@ -23,7 +23,7 @@ class VideoFolder(data.Dataset) :
     def __getitem__(self, index) :
         video_path = self.video_path[index]
         image_path = list(map(lambda x: os.path.join(video_path, x), os.listdir(video_path)))
-
+        
         video = None
 
         for image in image_path :                
