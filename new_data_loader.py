@@ -53,7 +53,7 @@ class VideoFolder(data.Dataset) :
         video = None
         
         image_path.sort()
-
+        
         for image in image_path :                
             image = Image.open(image).convert('RGB')
 
